@@ -5,6 +5,7 @@
 package elastic
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -796,12 +797,16 @@ type typeSearchHit SearchHit
 // UnmarshalJSON unmarshals sort as []json.RawMessage into RawSort to keep it as is,
 // and as []interface{} into Sort to keep backward compatible
 func (sh *SearchHit) UnmarshalJSON(data []byte) error {
-	if e := json.Unmarshal(data, (*typeSearchHit)(sh)); e != nil {
+	decode := json.NewDecoder(bytes.NewBuffer(data))
+	decode.UseNumber()
+	if e := decode.Decode((*typeSearchHit)(sh)); e != nil {
 		return e
 	}
 	for _, s := range sh.RawSort {
 		var sort interface{}
-		if e := json.Unmarshal(s, &sort); e != nil {
+		decode2 := json.NewDecoder(bytes.NewBuffer(s))
+		decode2.UseNumber()
+		if e := decode2.Decode(&sort); e != nil {
 			return e
 		}
 		sh.Sort = append(sh.Sort, sort)
